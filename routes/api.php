@@ -6,12 +6,14 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\DeviceController;
 
-//Rutas publicas
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
+//Rutas publicas pero con limite de auth
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login',    [AuthController::class, 'login']);
+});
 
 //Rutas protegidas
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:sanctum', 'throttle:api')->group(function () {
     //autenticacion
     Route::post('/logout', [AuthController::class, 'logout']);
 
