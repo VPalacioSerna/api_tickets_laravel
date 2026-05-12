@@ -3,6 +3,11 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -14,6 +19,54 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         //
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
+    ->withExceptions(function (Exceptions $exceptions) {
+        // Token inválido o no enviado
+        $exceptions->render(function (AuthenticationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No autenticado. Token inválido o no enviado.',
+            ], 401);
+        });
+
+        // Validación fallida
+        $exceptions->render(function (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación.',
+                'errors'  => $e->errors(),
+            ], 422);
+        });
+
+        // Modelo no encontrado — ej: /tickets/9999
+        $exceptions->render(function (ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Recurso no encontrado.',
+            ], 404);
+        });
+
+        // Ruta no encontrada
+        $exceptions->render(function (NotFoundHttpException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ruta no encontrada.',
+            ], 404);
+        });
+
+        // Rate limit excedido
+        $exceptions->render(function (TooManyRequestsHttpException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Demasiadas peticiones. Intenta de nuevo en un minuto.',
+            ], 429);
+        });
+
+        // Cualquier otro error inesperado — 500
+        $exceptions->render(function (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor.',
+                'error'   => app()->isLocal() ? $e->getMessage() : null,
+            ], 500);
+        });
     })->create();
