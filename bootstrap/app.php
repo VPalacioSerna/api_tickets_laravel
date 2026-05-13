@@ -21,6 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {
+
+        // Sentry captura todos los errores automáticamente
+        $exceptions->report(function (Throwable $e) {
+            if (app()->bound('sentry')) {
+                app('sentry')->captureException($e);
+            }
+        });
+
         // Token inválido o no enviado
         $exceptions->render(function (AuthenticationException $e) {
             return response()->json([
