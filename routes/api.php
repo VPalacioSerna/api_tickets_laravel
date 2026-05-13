@@ -6,6 +6,10 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\DeviceController;
 
+Route::get('/test-error', function () {
+    throw new \Exception('Error de prueba');
+});
+
 //Rutas publicas pero con limite de auth
 Route::middleware('throttle:auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);

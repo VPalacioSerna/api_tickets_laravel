@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -53,16 +54,28 @@ return Application::configure(basePath: dirname(__DIR__))
             ], 404);
         });
 
-        // Rate limit excedido
-        $exceptions->render(function (TooManyRequestsHttpException $e) {
+        // Rate limit excedido — notifica a Discord
+        $exceptions->render(function (TooManyRequestsHttpException $e, Request $request) {
+            app(\App\Services\DiscordService::class)->sendRateLimit(
+                $request->path(),
+                $request->ip()
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Demasiadas peticiones. Intenta de nuevo en un minuto.',
             ], 429);
         });
 
-        // Cualquier otro error inesperado — 500
-        $exceptions->render(function (Throwable $e) {
+        // Error 500 — notifica a Discord
+        $exceptions->render(function (Throwable $e, Request $request) {
+            app(\App\Services\DiscordService::class)->sendError(
+                $request->path(),
+                $request->method(),
+                $e->getMessage(),
+                $request->ip()
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error interno del servidor.',
